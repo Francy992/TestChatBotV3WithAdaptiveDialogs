@@ -2,10 +2,17 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Bot.Builder.Dialogs;
+using Microsoft.Bot.Builder.Dialogs.Adaptive;
+using Microsoft.Bot.Builder.Dialogs.Adaptive.Actions;
+using Microsoft.Bot.Builder.Dialogs.Adaptive.Conditions;
+using Microsoft.Bot.Builder.Dialogs.Adaptive.Input;
+using Microsoft.Bot.Builder.Dialogs.Adaptive.Templates;
+using Microsoft.Bot.Builder.Dialogs.Choices;
 using Microsoft.Bot.Schema;
 using Microsoft.Extensions.Configuration;
 using QnABot.Classes;
@@ -71,6 +78,8 @@ namespace Microsoft.BotBuilderSamples.Dialog
                 }
            ));
 
+            AddDialog(CreateCancelInterrupt());
+
             InitialDialogId = DialogName.LuisDialog;
         }
 
@@ -118,6 +127,40 @@ namespace Microsoft.BotBuilderSamples.Dialog
                 // We can return true from a validator function even if Recognized.Succeeded is false.
                 return true;
             }
+        }
+
+        private AdaptiveDialog CreateCancelInterrupt()
+        {   var dialog = new AdaptiveDialog()
+            {
+                AutoEndDialog = false,
+                Triggers = new List<OnCondition>() {
+                    new OnIntent() {
+                        Intent = "Cancel",
+                        Actions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>() {
+                             new ConfirmInput()
+                             {
+                                 Property = "turn.confirm",
+                                 AllowInterruptions = false,
+                                 Prompt = new ActivityTemplate("Confermi l'uscita?")
+                             },
+                             new IfCondition()
+                             {
+                                 Condition = "turn.confirm == true",
+                                 Actions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>()
+                                 {
+                                     new SendActivity("Bene, ricominciamo!"),
+                                     new CancelAllDialogs()
+                                 },
+                                 ElseActions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>()
+                                 {
+                                     new SendActivity("Bene, continuiamo!")
+                                 }
+                             }
+                        }
+                    }
+                }
+            };
+            return dialog;
         }
 
     }

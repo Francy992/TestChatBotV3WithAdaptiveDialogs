@@ -16,7 +16,7 @@ namespace Microsoft.BotBuilderSamples.Dialog
     public class QnAMakerBaseDialog : QnAMakerDialog
     {
         // Dialog Options parameters
-        public const string DefaultNoAnswer = "Scusami ma non ho capito. Potresti ripetere?";
+        public const string DefaultNoAnswer = "Scusami ma non ho capito.";
         public const string DefaultCardTitle = "Did you mean:";
         public const string DefaultCardNoMatchText = "None of the above.";
         public const string DefaultCardNoMatchResponse = "Thanks for the feedback.";
