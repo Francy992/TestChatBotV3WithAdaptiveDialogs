@@ -34,8 +34,6 @@ namespace Microsoft.BotBuilderSamples.Bots
         {
             await base.OnTurnAsync(turnContext, cancellationToken);
 
-            Telemetry.RegistryNewMessageSent(turnContext);
-
             // Save any state changes that might have occured during the turn.
             await ConversationState.SaveChangesAsync(turnContext, false, cancellationToken);
             await UserState.SaveChangesAsync(turnContext, false, cancellationToken);
@@ -43,6 +41,7 @@ namespace Microsoft.BotBuilderSamples.Bots
 
         protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
         {
+            Telemetry.RegistryNewMessageSent(turnContext);
             // Run the Dialog with the new message Activity.
             await Dialog.RunAsync(turnContext, ConversationState.CreateProperty<DialogState>(nameof(DialogState)), cancellationToken);
         }
@@ -56,9 +55,7 @@ namespace Microsoft.BotBuilderSamples.Bots
                     await turnContext.SendActivityAsync(MessageFactory.Text($"Hello and welcome!"), cancellationToken);
                 }
 
-                var et = Telemetry.GetEventTelemetryForStartConversation();
-                et.Properties.Add("id", member.Id);
-                Telemetry.RegistryTelemetry(et);
+                Telemetry.RegistryNewUserAdd(member.Id);
             }
         }
     }

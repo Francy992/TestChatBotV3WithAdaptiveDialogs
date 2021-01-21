@@ -4,6 +4,7 @@ using Microsoft.Bot.Schema;
 using Microsoft.Extensions.Configuration;
 using QnABot.Classes;
 using QnABot.Luis;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,11 +15,13 @@ namespace QnABot.Dialog
         private readonly ConcreteLuisRecognizer _luisRecognizer;
         private ResultFromLuis _resultFromLuis;
         private IConfiguration configuration;
+        private TelemetryHandle Telemetry;
 
-        public LuisDialog(IConfiguration configuration)
+        public LuisDialog(IConfiguration configuration, TelemetryHandle telemetry)
         {
             _luisRecognizer = new ConcreteLuisRecognizer(configuration);
             this.configuration = configuration;
+            Telemetry = telemetry;
         }
 
         public async Task<DialogTurnResult> IntroStepAsync(WaterfallStepContext stepContext, CancellationToken cancellationToken)
@@ -50,7 +53,8 @@ namespace QnABot.Dialog
 
             // Call LUIS and gather any potential booking details. (Note the TurnContext has the response to the prompt.)
             _resultFromLuis = await _luisRecognizer.RecognizeAsync<ResultFromLuis>(stepContext.Context, cancellationToken);
-
+            // Registry Luis response
+            Telemetry.RegistryLuisResult(_resultFromLuis, stepContext);
             switch (_resultFromLuis.Intent)
             {
                 case Intent.IdeeViaggio:

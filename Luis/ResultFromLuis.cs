@@ -15,14 +15,24 @@ namespace QnABot.Luis
         {
         }
 
+        public double GetScore()
+        {
+            return ResultObj?.Intents?.FirstOrDefault().Value?.Score ?? 0;
+        }
+
+        public string GetIntent()
+        {
+            return ResultObj?.Intents?.FirstOrDefault().Key ?? "";
+        }
+
         public void Convert(dynamic result)
         {
             RecognizerResult resultObj = (RecognizerResult)result;
             ResultObj = resultObj;
             Text = resultObj.Text;
-            Score = resultObj?.Intents?.FirstOrDefault().Value?.Score ?? 0;
+            Score = GetScore();
             if(Score >= 0.50)
-                switch (resultObj?.Intents?.FirstOrDefault().Key)
+                switch (GetIntent())
                 {
                     case "TravelExample":
                         Intent = Intent.IdeeViaggio;

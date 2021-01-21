@@ -17,7 +17,7 @@ namespace Microsoft.BotBuilderSamples.Dialog
     public class RootDialog : ComponentDialog
     {
 
-        public RootDialog(IBotServices services, IConfiguration configuration, IWeather weather)
+        public RootDialog(IBotServices services, IConfiguration configuration, IWeather weather, TelemetryHandle telemetry)
             : base("root")
         {
             AddDefaultDialog();
@@ -62,7 +62,7 @@ namespace Microsoft.BotBuilderSamples.Dialog
                 }));
 
             // Luis Dialog
-            var luisDialog = new LuisDialog(configuration);
+            var luisDialog = new LuisDialog(configuration, telemetry);
             AddDialog(new WaterfallDialog(DialogName.LuisDialog, new WaterfallStep[] 
                 {
                     luisDialog.IntroStepAsync,
