@@ -153,22 +153,6 @@ namespace Microsoft.BotBuilderSamples.Dialog
             var dialog = new AdaptiveDialog(nameof(AdaptiveDialog))
             {
                 AutoEndDialog = false,
-                //Recognizer = new RegexRecognizer()
-                //{
-                //    Intents = new List<IntentPattern>()
-                //    {
-                //        new IntentPattern()
-                //        {
-                //            Intent = "HelpIntent",
-                //            Pattern = "(?i)help"
-                //        },
-                //        new IntentPattern()
-                //        {
-                //            Intent = "CancelIntent",
-                //            Pattern = "(?i)cancel|never mind"
-                //        }
-                //    }
-                //},
                 Recognizer = CreateLuisRecognizer(configuration),
                 Triggers = new List<OnCondition>() {
                     new OnIntent() {

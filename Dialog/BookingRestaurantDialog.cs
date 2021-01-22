@@ -1,5 +1,6 @@
 ﻿using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Dialogs;
+using Microsoft.Bot.Builder.Dialogs.Adaptive;
 using Microsoft.Bot.Builder.Dialogs.Choices;
 using Microsoft.Bot.Schema;
 using QnABot.Classes;
@@ -76,7 +77,7 @@ namespace QnABot.Dialog
             var message = MessageFactory.Text(messageText, messageText, InputHints.IgnoringInput);
             await context.Context.SendActivityAsync(message, cancellationToken);
             await context.EndDialogAsync();
-            return await context.BeginDialogAsync(DialogName.LuisDialog, null, cancellationToken);
+            return await context.BeginDialogAsync(nameof(AdaptiveDialog), null, cancellationToken);
         }
     }
 }

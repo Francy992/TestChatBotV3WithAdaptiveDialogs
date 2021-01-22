@@ -1,5 +1,6 @@
 ﻿using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Dialogs;
+using Microsoft.Bot.Builder.Dialogs.Adaptive;
 using Microsoft.Bot.Schema;
 using QnABot.Classes;
 using QnABot.Interfaces;
@@ -110,7 +111,7 @@ namespace QnABot.Dialog
 
                 await context.Context.SendActivityAsync(MessageFactory.Attachment(cardAttachment), cancellationToken);
                 await context.EndDialogAsync();
-                return await context.BeginDialogAsync(DialogName.LuisDialog, null);
+                return await context.BeginDialogAsync(nameof(AdaptiveDialog), null);
             }            
         }
 
