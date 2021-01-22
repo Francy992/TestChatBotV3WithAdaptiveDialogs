@@ -14,6 +14,9 @@ namespace QnABot.Classes
         public static bool ExistPropertyInEntitiesFromLuis(ResultFromLuis luisResult, string property)
         {
             bool found = false;
+            if (luisResult == null)
+                return found;
+
             try
             {
                 luisResult.ResultObj.Entities.Root.ToList().ForEach(obj =>
@@ -32,6 +35,9 @@ namespace QnABot.Classes
         public static T GetPropertyInEntitiesFromLuis<T>(ResultFromLuis luisResult, string property)
         {
             T city = default(T);
+            if (luisResult == null)
+                return city;
+
             try
             {
                 if(typeof(T) == typeof(DateTime))

@@ -1,5 +1,8 @@
 ﻿using Microsoft.Bot.Builder;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Linq;
+using System.Text.Json;
 
 namespace QnABot.Luis
 {
@@ -14,6 +17,10 @@ namespace QnABot.Luis
         public ResultFromLuis()
         {
         }
+        public ResultFromLuis(dynamic result)
+        {
+            ConvertFromDynamic(result);
+        }
 
         public double GetScore()
         {
@@ -27,11 +34,22 @@ namespace QnABot.Luis
 
         public void Convert(dynamic result)
         {
-            RecognizerResult resultObj = (RecognizerResult)result;
-            ResultObj = resultObj;
-            Text = resultObj.Text;
+            ResultObj = (RecognizerResult)result;
+            CompleteConvert();
+        }
+
+        private void ConvertFromDynamic(dynamic result)
+        {
+            var x = (JToken)result.recognized;
+            ResultObj = x.ToObject<RecognizerResult>();
+            CompleteConvert();
+        }
+
+        private void CompleteConvert()
+        {
+            Text = ResultObj.Text;
             Score = GetScore();
-            if(Score >= 0.50)
+            if (Score >= 0.50)
                 switch (GetIntent())
                 {
                     case "TravelExample":
@@ -56,7 +74,6 @@ namespace QnABot.Luis
                 Intent = Intent.None;
             }
         }
-
     }
 
     public enum Intent

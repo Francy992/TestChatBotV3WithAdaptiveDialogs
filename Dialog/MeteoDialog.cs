@@ -23,12 +23,12 @@ namespace QnABot.Dialog
 
         public async Task<DialogTurnResult> GetCityFromUser(WaterfallStepContext context, CancellationToken cancellationToken)
         {
-
+            var resultFromLuis = new ResultFromLuis(context.Options);
             bool previusError = CheckPreviusError(context, "errorCity");
             //if previusError == true the old date is not valid and user must insert new city
-            if (!previusError && Utils.ExistPropertyInEntitiesFromLuis((ResultFromLuis)context.Options, "Citta"))
+            if (!previusError && resultFromLuis != null && Utils.ExistPropertyInEntitiesFromLuis(resultFromLuis, "Citta"))
             {
-                var city = Utils.GetPropertyInEntitiesFromLuis<string>((ResultFromLuis)context.Options, "Citta");
+                var city = Utils.GetPropertyInEntitiesFromLuis<string>(resultFromLuis, "Citta");
                 if (string.IsNullOrEmpty(city))
                     previusError = true;
                 else
@@ -57,11 +57,13 @@ namespace QnABot.Dialog
             context.Values.TryGetValue("errorDatetime", out object obj);
             bool previusError = obj != null ? (bool)obj : false;
 
+            var resultFromLuis = new ResultFromLuis(context.Options);
+
             //if previusError == true the old date is not valid and user must insert new dateù
-            if (!previusError && Utils.ExistPropertyInEntitiesFromLuis((ResultFromLuis)context.Options, "datetime"))
+            if (!previusError && resultFromLuis != null && Utils.ExistPropertyInEntitiesFromLuis(resultFromLuis, "datetime"))
             {
                 // save date and go away if it is ok
-                var date = Utils.GetPropertyInEntitiesFromLuis<DateTime>((ResultFromLuis)context.Options, "datetime");
+                var date = Utils.GetPropertyInEntitiesFromLuis<DateTime>(resultFromLuis, "datetime");
                 if (date == null || DateTime.Now > date || DateTime.Now.AddDays(5) < date)
                 {
                     previusError = true;

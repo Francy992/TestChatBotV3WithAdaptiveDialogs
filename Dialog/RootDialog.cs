@@ -1,16 +1,21 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Bot.Builder;
+using Microsoft.Bot.Builder.AI.Luis;
 using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Builder.Dialogs.Adaptive;
 using Microsoft.Bot.Builder.Dialogs.Adaptive.Actions;
 using Microsoft.Bot.Builder.Dialogs.Adaptive.Conditions;
+using Microsoft.Bot.Builder.Dialogs.Adaptive.Generators;
 using Microsoft.Bot.Builder.Dialogs.Adaptive.Input;
+using Microsoft.Bot.Builder.Dialogs.Adaptive.Recognizers;
 using Microsoft.Bot.Builder.Dialogs.Adaptive.Templates;
 using Microsoft.Bot.Builder.Dialogs.Choices;
 using Microsoft.Bot.Schema;
@@ -18,6 +23,7 @@ using Microsoft.Extensions.Configuration;
 using QnABot.Classes;
 using QnABot.Dialog;
 using QnABot.Interfaces;
+using QnABot.Luis;
 
 namespace Microsoft.BotBuilderSamples.Dialog
 {
@@ -29,12 +35,26 @@ namespace Microsoft.BotBuilderSamples.Dialog
         {
             AddDefaultDialog();
 
+            AddDialog(CreateCancelInterrupt(services, weather, configuration, telemetry));
+
+            GetAllDialogs(services, weather, configuration, telemetry).ForEach(x =>
+            {
+                AddDialog(x);
+            });
+
+            InitialDialogId = nameof(AdaptiveDialog);
+        }
+
+        private List<Microsoft.Bot.Builder.Dialogs.Dialog> GetAllDialogs(IBotServices services, IWeather weather,
+            IConfiguration configuration, TelemetryHandle telemetry)
+        {
+            List<Microsoft.Bot.Builder.Dialogs.Dialog> dialogs = new List<Bot.Builder.Dialogs.Dialog>();
             // QnAMakerBaseDialog
-            AddDialog(new QnAMakerBaseDialog(services));
+            dialogs.Add(new QnAMakerBaseDialog(services));
 
             // Travel booking
             var travelBookingDialog = new TravelBookingDialog();
-            AddDialog(new WaterfallDialog(DialogName.HandleTravelBookingDialog, new WaterfallStep[]
+            dialogs.Add(new WaterfallDialog(DialogName.HandleTravelBookingDialog, new WaterfallStep[]
                 {
                     travelBookingDialog.GetCity,
                     travelBookingDialog.GetDate,
@@ -44,7 +64,7 @@ namespace Microsoft.BotBuilderSamples.Dialog
 
             // Booking restaurant
             var restaurantBookingDialog = new BookingRestaurantDialog();
-            AddDialog(new WaterfallDialog(DialogName.HandleBookingRestaurant, new WaterfallStep[]
+            dialogs.Add(new WaterfallDialog(DialogName.HandleBookingRestaurant, new WaterfallStep[]
                 {
                     restaurantBookingDialog.GetCity,
                     restaurantBookingDialog.GetDate,
@@ -54,14 +74,14 @@ namespace Microsoft.BotBuilderSamples.Dialog
 
             // Travel 
             var travelDialog = new TravelDialog();
-            AddDialog(new WaterfallDialog(DialogName.HandleTravelDialog, new WaterfallStep[]
+            dialogs.Add(new WaterfallDialog(DialogName.HandleTravelDialog, new WaterfallStep[]
                 {
                     travelDialog.GetRandomCity
                 }));
 
             // Meteo
             var meteoDialog = new MeteoDialog(weather);
-            AddDialog(new WaterfallDialog(DialogName.HandleMeteo, new WaterfallStep[]
+            dialogs.Add(new WaterfallDialog(DialogName.HandleMeteo, new WaterfallStep[]
                 {
                     meteoDialog.GetCityFromUser,
                     meteoDialog.GetDataFromUser,
@@ -70,7 +90,7 @@ namespace Microsoft.BotBuilderSamples.Dialog
 
             // Luis Dialog
             var luisDialog = new LuisDialog(configuration, telemetry);
-            AddDialog(new WaterfallDialog(DialogName.LuisDialog, new WaterfallStep[] 
+            dialogs.Add(new WaterfallDialog(DialogName.LuisDialog, new WaterfallStep[]
                 {
                     luisDialog.IntroStepAsync,
                     luisDialog.LuisStepAsync,
@@ -78,9 +98,7 @@ namespace Microsoft.BotBuilderSamples.Dialog
                 }
            ));
 
-            AddDialog(CreateCancelInterrupt());
-
-            InitialDialogId = DialogName.LuisDialog;
+            return dialogs;
         }
 
         private void AddDefaultDialog()
@@ -129,33 +147,133 @@ namespace Microsoft.BotBuilderSamples.Dialog
             }
         }
 
-        private AdaptiveDialog CreateCancelInterrupt()
-        {   var dialog = new AdaptiveDialog()
+        private AdaptiveDialog CreateCancelInterrupt(IBotServices services, IWeather weather,
+            IConfiguration configuration, TelemetryHandle telemetry)
+        {
+            var dialog = new AdaptiveDialog(nameof(AdaptiveDialog))
             {
                 AutoEndDialog = false,
+                //Recognizer = new RegexRecognizer()
+                //{
+                //    Intents = new List<IntentPattern>()
+                //    {
+                //        new IntentPattern()
+                //        {
+                //            Intent = "HelpIntent",
+                //            Pattern = "(?i)help"
+                //        },
+                //        new IntentPattern()
+                //        {
+                //            Intent = "CancelIntent",
+                //            Pattern = "(?i)cancel|never mind"
+                //        }
+                //    }
+                //},
+                Recognizer = CreateLuisRecognizer(configuration),
                 Triggers = new List<OnCondition>() {
+                    new OnIntent() {
+                        Intent = "Weather",
+                        Actions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>()
+                        {
+                            new IfCondition()
+                            {
+                                Condition = "turn.recognized.score >= 0.8",
+                                Actions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>()
+                                {
+                                    new BeginDialog(DialogName.HandleMeteo, "turn")
+                                },
+                                ElseActions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>()
+                                {
+                                    new BeginDialog(DialogName.QnAMakerDialog)
+                                }
+                            }
+                        },
+                    }, 
+                    new OnIntent() {
+                        Intent = "TravelBooking",
+                        Actions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>()
+                        {
+                            new IfCondition()
+                            {
+                                Condition = "turn.recognized.score >= 0.8",
+                                Actions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>()
+                                {
+                                    new BeginDialog(DialogName.HandleTravelBookingDialog, "turn")
+                                },
+                                ElseActions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>()
+                                {
+                                    new BeginDialog(DialogName.QnAMakerDialog)
+                                }
+                            }
+                        },
+                    }, 
+                    new OnIntent() {
+                        Intent = "BookingRestaurant",
+                        Actions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>()
+                        {
+                            new IfCondition()
+                            {
+                                Condition = "turn.recognized.score >= 0.8",
+                                Actions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>()
+                                {
+                                    new BeginDialog(DialogName.HandleBookingRestaurant, "turn")
+                                },
+                                ElseActions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>()
+                                {
+                                    new BeginDialog(DialogName.QnAMakerDialog)
+                                }
+                            }
+                        },
+                    },
+                    new OnIntent() {
+                        Intent = "TravelExample",
+                        Actions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>()
+                        {
+                            new IfCondition()
+                            {
+                                Condition = "turn.recognized.score >= 0.8",
+                                Actions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>()
+                                {
+                                    new BeginDialog(DialogName.HandleTravelDialog, "turn")
+                                },
+                                ElseActions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>()
+                                {
+                                    new BeginDialog(DialogName.QnAMakerDialog)
+                                }
+                            }
+                        },
+                        Condition = "turn.recognized.score >= 0.8"
+                    },
                     new OnIntent() {
                         Intent = "Cancel",
                         Actions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>() {
-                             new ConfirmInput()
-                             {
-                                 Property = "turn.confirm",
-                                 AllowInterruptions = false,
-                                 Prompt = new ActivityTemplate("Confermi l'uscita?")
-                             },
-                             new IfCondition()
-                             {
-                                 Condition = "turn.confirm == true",
-                                 Actions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>()
-                                 {
-                                     new SendActivity("Bene, ricominciamo!"),
-                                     new CancelAllDialogs()
-                                 },
-                                 ElseActions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>()
-                                 {
-                                     new SendActivity("Bene, continuiamo!")
-                                 }
-                             }
+                                new ConfirmInput()
+                                {
+                                    Property = "turn.confirm",
+                                    AllowInterruptions = false,
+                                    Prompt = new ActivityTemplate("Confermi l'uscita?")
+                                },
+                                new IfCondition()
+                                {
+                                    Condition = "turn.confirm == true",
+                                    Actions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>()
+                                    {
+                                        new SendActivity("Bene, ricominciamo!"),
+                                        new CancelAllDialogs()
+                                    },
+                                    ElseActions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>()
+                                    {
+                                        new SendActivity("Bene, continuiamo!")
+                                    }
+                                }
+                        },
+                        Condition = "turn.recognized.score >= 0.8"
+                    },
+                    new OnIntent() {
+                        Intent = "None",
+                        Actions = new List<Microsoft.Bot.Builder.Dialogs.Dialog>() 
+                        {
+                            new ReplaceDialog(DialogName.QnAMakerDialog, null)
                         }
                     }
                 }
@@ -163,5 +281,20 @@ namespace Microsoft.BotBuilderSamples.Dialog
             return dialog;
         }
 
+
+        private static Recognizer CreateLuisRecognizer(IConfiguration configuration)
+        {
+            if (string.IsNullOrEmpty(configuration["LuisAppId"]) || string.IsNullOrEmpty(configuration["LuisAPIKey"]) || string.IsNullOrEmpty(configuration["LuisAPIHostName"]))
+            {
+                throw new Exception("NOTE: LUIS is not configured for RootDialog. To enable all capabilities, add 'LuisAppId-RootDialog', 'LuisAPIKey' and 'LuisAPIHostName' to the appsettings.json file.");
+            }
+
+            return new LuisAdaptiveRecognizer()
+            {
+                ApplicationId = configuration["LuisAppId"],
+                EndpointKey = configuration["LuisAPIKey"],
+                Endpoint = configuration["LuisAPIHostName"]
+            };
+        }
     }
 }
